@@ -1,0 +1,1 @@
+/etc/nixos/ai-agent-os/target/debug/ai-agent: /etc/nixos/ai-agent-os/crates/agent-core/src/lib.rs /etc/nixos/ai-agent-os/crates/agent-core/src/main.rs /etc/nixos/ai-agent-os/crates/hyprland-ipc/src/lib.rs /etc/nixos/ai-agent-os/crates/log-collector/src/lib.rs /etc/nixos/ai-agent-os/crates/system-monitor/src/lib.rs

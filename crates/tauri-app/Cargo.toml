@@ -1,0 +1,40 @@
+[package]
+name = "tauri-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "tauri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "ai-agent-gui"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace deps
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# Internal crates
+system-monitor = { path = "../system-monitor" }
+ai-intelligence = { path = "../ai-intelligence" }
+hyprland-ipc = { path = "../hyprland-ipc" }
+
+# Tauri
+tauri = { version = "1.8", features = ["api-all", "system-tray", "global-shortcut"] }
+
+# Additional
+chrono = "0.4"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

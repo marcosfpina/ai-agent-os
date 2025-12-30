@@ -1,0 +1,53 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/agent-core",
+    "crates/system-monitor",
+    "crates/hyprland-ipc",
+    "crates/log-collector",
+    "crates/ai-intelligence",
+    "crates/tauri-app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["kernelcore"]
+license = "MIT"
+repository = "https://github.com/kernelcore/ai-agent-os"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+tokio-stream = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# System
+libc = "0.2"
+nix = { version = "0.27", features = ["process", "signal"] }
+
+# IPC
+serde_repr = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

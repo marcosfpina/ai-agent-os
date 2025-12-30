@@ -1,0 +1,25 @@
+[package]
+name = "agent-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Local dependencies
+system-monitor = { path = "../system-monitor" }
+hyprland-ipc = { path = "../hyprland-ipc" }
+log-collector = { path = "../log-collector" }
+
+[[bin]]
+name = "ai-agent"
+path = "src/main.rs"

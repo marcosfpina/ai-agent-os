@@ -1,0 +1,37 @@
+[package]
+name = "ai-intelligence"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace deps
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Internal crates
+system-monitor = { path = "../system-monitor" }
+log-collector = { path = "../log-collector" }
+hyprland-ipc = { path = "../hyprland-ipc" }
+
+# ML/AI dependencies
+# candle-core = "0.3"  # For future ML models
+# ort = "1.16"         # ONNX runtime
+
+# Time series analysis
+chrono = "0.4"
+
+# Statistical analysis
+statrs = "0.16"
+
+# Storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
