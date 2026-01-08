@@ -1,0 +1,5 @@
+target/debug/deps/*
+.env
+target/debug*
+target/*
+
