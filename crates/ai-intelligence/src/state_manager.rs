@@ -177,7 +177,7 @@ impl StateManager {
         }
         
         let latest = snapshots[0];
-        let mut score = 100.0;
+        let mut score: f32 = 100.0;
         
         // Penalize high resource usage
         if latest.cpu_percent > 80.0 {

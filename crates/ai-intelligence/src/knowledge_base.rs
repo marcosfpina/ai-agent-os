@@ -6,19 +6,20 @@ use anyhow::Result;
 use rusqlite::{Connection, params};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
+use tokio::sync::Mutex;
 
 use crate::{Problem, RemediationResult};
 
 /// Knowledge base for storing historical data
 pub struct KnowledgeBase {
     /// SQLite connection
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl KnowledgeBase {
     /// Create new knowledge base
     pub async fn new() -> Result<Self> {
-        let conn = Connection::open("agent-knowledge.db")?;
+        let conn = Mutex::new(Connection::open("agent-knowledge.db")?);
         
         // Create tables
         conn.execute(
@@ -53,18 +54,19 @@ impl KnowledgeBase {
     
     /// Record a successful action
     pub async fn record_success(
-        &mut self,
+        &self,
         problem: Problem,
         result: RemediationResult,
     ) -> Result<()> {
         let timestamp = Utc::now().to_rfc3339();
         let problem_type = format!("{:?}", problem).split('(').next().unwrap_or("Unknown").to_string();
         let problem_data = serde_json::to_string(&problem)?;
-        
-        self.conn.execute(
+
+        let conn = self.conn.lock().await;
+        conn.execute(
             "INSERT INTO actions (
-                timestamp, problem_type, problem_data, 
-                action_type, action_data, success, 
+                timestamp, problem_type, problem_data,
+                action_type, action_data, success,
                 result_message, metrics_before, metrics_after
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
@@ -85,15 +87,16 @@ impl KnowledgeBase {
     
     /// Record a failed action
     pub async fn record_failure(
-        &mut self,
+        &self,
         problem: Problem,
         error: String,
     ) -> Result<()> {
         let timestamp = Utc::now().to_rfc3339();
         let problem_type = format!("{:?}", problem).split('(').next().unwrap_or("Unknown").to_string();
         let problem_data = serde_json::to_string(&problem)?;
-        
-        self.conn.execute(
+
+        let conn = self.conn.lock().await;
+        conn.execute(
             "INSERT INTO actions (
                 timestamp, problem_type, problem_data,
                 action_type, action_data, success,
@@ -118,8 +121,9 @@ impl KnowledgeBase {
     /// Get success rate for a problem type
     pub async fn get_success_rate(&self, problem: &Problem) -> Result<f32> {
         let problem_type = format!("{:?}", problem).split('(').next().unwrap_or("Unknown").to_string();
-        
-        let mut stmt = self.conn.prepare(
+
+        let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare(
             "SELECT 
                 SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,
                 COUNT(*) as total
@@ -140,7 +144,8 @@ impl KnowledgeBase {
     
     /// Extract patterns from historical data
     pub async fn extract_patterns(&self) -> Result<Vec<Pattern>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare(
             "SELECT problem_type, COUNT(*) as frequency
             FROM actions
             WHERE timestamp > datetime('now', '-30 days')

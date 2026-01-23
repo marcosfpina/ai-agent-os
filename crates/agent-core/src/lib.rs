@@ -9,6 +9,9 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use tracing::{debug, error, info, warn};
 
+mod phantom_gate;
+pub use phantom_gate::{PhantomGate, PhantomGateBundle, PhantomGateConfig, PhantomGateResult};
+
 // Re-export crate modules
 pub use hyprland_ipc;
 pub use log_collector;
@@ -22,6 +25,7 @@ pub struct AgentConfig {
     pub memory_threshold_percent: f32,
     pub enable_hyprland: bool,
     pub log_filter: log_collector::LogFilter,
+    pub phantom_gate: PhantomGateConfig,
 }
 
 impl Default for AgentConfig {
@@ -32,6 +36,7 @@ impl Default for AgentConfig {
             memory_threshold_percent: 85.0,
             enable_hyprland: true,
             log_filter: log_collector::LogFilter::default(),
+            phantom_gate: PhantomGateConfig::default(),
         }
     }
 }
@@ -78,6 +83,7 @@ pub struct Agent {
     state: Arc<RwLock<AgentState>>,
     system_monitor: Arc<RwLock<system_monitor::SystemMonitor>>,
     hyprland_client: Option<Arc<RwLock<hyprland_ipc::HyprlandClient>>>,
+    phantom_gate: Option<Arc<PhantomGate>>,
 }
 
 impl Agent {
@@ -115,12 +121,25 @@ impl Agent {
             alerts: Vec::new(),
             hyprland_connected: hyprland_client.is_some(),
         }));
+
+        let phantom_gate = if config.phantom_gate.enabled {
+            match PhantomGate::new(config.phantom_gate.clone()) {
+                Ok(g) => Some(Arc::new(g)),
+                Err(e) => {
+                    warn!("Failed to initialize PhantomGate: {}. Continuing without Phantom integration.", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
         
         Ok(Self {
             config,
             state,
             system_monitor,
             hyprland_client,
+            phantom_gate,
         })
     }
     
@@ -196,6 +215,7 @@ impl Agent {
         let interval = self.config.monitoring_interval_secs;
         let thermal_threshold = self.config.thermal_threshold_celsius;
         let memory_threshold = self.config.memory_threshold_percent;
+        let phantom_gate = self.phantom_gate.clone();
         
         tokio::spawn(async move {
             info!("System monitoring task started");
@@ -275,11 +295,55 @@ impl Agent {
                 }
                 
                 // Log alerts
-                for alert in alerts {
+                for alert in alerts.clone() {
                     match alert.severity {
                         AlertSeverity::Info => info!("{}", alert.message),
                         AlertSeverity::Warning => warn!("{}", alert.message),
                         AlertSeverity::Critical => error!("{}", alert.message),
+                    }
+                }
+
+                // Phantom judging pipeline: produce a report bundle and let Phantom classify/sanitize/audit it.
+                // Best-effort + report-only: failures should not break monitoring.
+                if let Some(gate) = phantom_gate.clone() {
+                    if !alerts.is_empty() {
+                        let metrics_copy = metrics.clone();
+                        let alerts_copy = alerts.clone();
+
+                        tokio::spawn(async move {
+                            // Collect recent logs (best-effort)
+                            let logs: Vec<log_collector::LogEntry> = tokio::task::spawn_blocking(|| {
+                                let mut collector = log_collector::LogCollector::new()?;
+                                collector.get_recent_entries(200)
+                            })
+                            .await
+                            .ok()
+                            .and_then(|r: Result<Vec<log_collector::LogEntry>, anyhow::Error>| r.ok())
+                            .unwrap_or_default();
+
+                            let hostname = std::env::var("HOSTNAME").ok();
+
+                            let bundle = PhantomGateBundle {
+                                timestamp: metrics_copy.timestamp,
+                                hostname,
+                                metrics: metrics_copy,
+                                alerts: alerts_copy,
+                                logs,
+                            };
+
+                            match gate.judge_bundle(&bundle).await {
+                                Ok(res) => {
+                                    info!(
+                                        "🔮 PhantomGate judged bundle: dir={} bundle={}",
+                                        res.bundle_dir, res.bundle_file
+                                    );
+                                    for note in res.notes {
+                                        warn!("PhantomGate note: {}", note);
+                                    }
+                                }
+                                Err(e) => warn!("PhantomGate failed: {}", e),
+                            }
+                        });
                     }
                 }
                 

@@ -3,7 +3,7 @@
 //! Detects unusual patterns in system behavior using statistical analysis.
 
 use anyhow::Result;
-use statrs::statistics::{Statistics, Data};
+use statrs::statistics::{Statistics, Data, Distribution, Min, Max};
 use std::collections::VecDeque;
 
 use crate::state_manager::StateSnapshot;

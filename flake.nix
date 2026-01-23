@@ -38,8 +38,9 @@
           libxkbcommon
           wayland
           openssl
+          libsoup_3
           # Tauri dependencies
-          webkitgtk_4_1
+          webkitgtk_6_0
           gtk3
           cairo
           gdk-pixbuf

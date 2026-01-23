@@ -10,6 +10,7 @@ pub mod knowledge_base;
 pub mod anomaly_detector;
 
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error};
@@ -178,7 +179,7 @@ impl IntelligentAgent {
 }
 
 /// Problem detected by proactive monitor
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Problem {
     MemoryPressure { usage_percent: f32 },
     CpuOverload { load: f32 },

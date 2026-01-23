@@ -3,6 +3,7 @@
 //! Continuously monitors system state and predicts/detects problems before they become critical.
 
 use anyhow::Result;
+use std::cell::RefCell;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc;
@@ -27,7 +28,7 @@ pub struct ProactiveMonitor {
     
     /// Problem notification channel
     problem_tx: mpsc::UnboundedSender<Problem>,
-    problem_rx: Option<mpsc::UnboundedReceiver<Problem>>,
+    problem_rx: RefCell<Option<mpsc::UnboundedReceiver<Problem>>>,
 }
 
 impl ProactiveMonitor {
@@ -68,8 +69,8 @@ impl ProactiveMonitor {
     }
     
     /// Wait for next detected problem
-    pub async fn detect_next_problem(&mut self) -> Option<Problem> {
-        if let Some(rx) = &mut self.problem_rx {
+    pub async fn detect_next_problem(&self) -> Option<Problem> {
+        if let Some(rx) = self.problem_rx.borrow_mut().as_mut() {
             rx.recv().await
         } else {
             None

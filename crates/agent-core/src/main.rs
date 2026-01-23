@@ -2,7 +2,7 @@
 //!
 //! Example usage of the agent core library
 
-use agent_core::{Agent, AgentConfig};
+use agent_core::{Agent, AgentConfig, PhantomGateConfig};
 use anyhow::Result;
 use tracing::{info, Level};
 use tracing_subscriber;
@@ -22,6 +22,10 @@ async fn main() -> Result<()> {
         thermal_threshold_celsius: 75.0,
         memory_threshold_percent: 85.0,
         enable_hyprland: true,
+        phantom_gate: PhantomGateConfig {
+            enabled: true,
+            ..Default::default()
+        },
         ..Default::default()
     };
     
