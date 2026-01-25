@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 mod phantom_gate;
