@@ -22,7 +22,7 @@ COPY spectre/crates/spectre-core   ./spectre/crates/spectre-core
 COPY ai-agent-os ./ai-agent-os
 
 WORKDIR /build/ai-agent-os
-RUN cargo build --release -p agent-core
+RUN cargo build --release -p agent-core --bin ai-agent
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /build/ai-agent-os/target/release/agent-core /usr/local/bin/ai-agent-os
+COPY --from=builder /build/ai-agent-os/target/release/ai-agent /usr/local/bin/ai-agent-os
 
 ENV NATS_URL=nats://nats:4222
 
