@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
 
-    let agent = Agent::with_config(config)?;
+    let agent = Agent::with_config(config).await?;
 
     info!("✅ Agent initialized successfully");
 
