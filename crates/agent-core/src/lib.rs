@@ -5,6 +5,7 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
@@ -169,9 +170,12 @@ impl Agent {
             // NKey auth: async-nats accepts the seed string directly via .nkey(seed).
             // Prefer inline seed env var (12-factor / SOPS-encrypted .env),
             // fall back to seed file (NixOS file-based secrets).
-            let nkey_seed: Option<String> = if let Ok(seed) = std::env::var("NATS_NKEY_SEED") {
-                let s = seed.trim().to_string();
-                if s.is_empty() { None } else { Some(s) }
+            let inline_nkey_seed = std::env::var("NATS_NKEY_SEED")
+                .ok()
+                .map(|seed| seed.trim().to_string())
+                .filter(|seed| !seed.is_empty());
+            let nkey_seed: Option<String> = if let Some(seed) = inline_nkey_seed {
+                Some(seed)
             } else if let Ok(path) = std::env::var("NATS_NKEY_SEED_FILE") {
                 let path = path.trim().to_string();
                 if path.is_empty() {
@@ -195,6 +199,25 @@ impl Agent {
             if let Some(seed) = nkey_seed {
                 opts = opts.nkey(seed);
                 info!("Spectre NATS NKey auth enabled");
+            }
+
+            if let Ok(ca_file) = std::env::var("NATS_CA_FILE") {
+                let ca_file = ca_file.trim().to_string();
+                if !ca_file.is_empty() {
+                    opts = opts.add_root_certificates(PathBuf::from(ca_file));
+                }
+            }
+            let client_cert = std::env::var("NATS_CLIENT_CERT_FILE").ok();
+            let client_key = std::env::var("NATS_CLIENT_KEY_FILE").ok();
+            if let (Some(cert), Some(key)) = (client_cert, client_key) {
+                let cert = cert.trim().to_string();
+                let key = key.trim().to_string();
+                if !cert.is_empty() && !key.is_empty() {
+                    opts = opts.add_client_certificate(PathBuf::from(cert), PathBuf::from(key));
+                }
+            }
+            if url.starts_with("tls://") {
+                opts = opts.require_tls(true);
             }
 
             match opts.connect(url).await {

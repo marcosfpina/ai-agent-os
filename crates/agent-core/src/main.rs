@@ -4,6 +4,7 @@
 
 use agent_core::{Agent, AgentConfig, PhantomGateConfig};
 use anyhow::Result;
+use std::env;
 use tracing::{info, Level};
 use tracing_subscriber;
 
@@ -20,6 +21,10 @@ async fn main() -> Result<()> {
         thermal_threshold_celsius: 75.0,
         memory_threshold_percent: 85.0,
         enable_hyprland: true,
+        nats_url: env::var("NATS_URL")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
         phantom_gate: PhantomGateConfig {
             enabled: true,
             ..Default::default()
